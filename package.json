@@ -1,10 +1,11 @@
 {
   "name": "echoes",
   "version": "1.0.0",
-  "description": "",
+  "description": "��#\u0000 \u0000e\u0000c\u0000h\u0000o\u0000e\u0000s\u0000\r\u0000 \u0000",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
   },
   "keywords": [],
   "author": "",
@@ -22,5 +23,13 @@
     "nodemon": "^3.1.14",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/komalbattan/echoes.git"
+  },
+  "bugs": {
+    "url": "https://github.com/komalbattan/echoes/issues"
+  },
+  "homepage": "https://github.com/komalbattan/echoes#readme"
 }

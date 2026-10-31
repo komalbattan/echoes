@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Echoes: a ghost in the machine</title>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;font-family:Consolas,"Courier New",monospace;color:#d6f5ee;
+    background:radial-gradient(circle at 50% 0%,#1d1b4b 0%,#0b0b1a 55%,#05050c 100%);
+    display:flex;justify-content:center;padding:32px 16px}
+  .wrap{width:100%;max-width:680px}
+  .ghost{font-size:56px;text-align:center;animation:float 3.5s ease-in-out infinite;
+    filter:drop-shadow(0 0 18px #7ff);}
+  @keyframes float{50%{transform:translateY(-12px)}}
+  h1{text-align:center;margin:6px 0 4px;font-size:42px;letter-spacing:6px;color:#9ff;
+    text-shadow:0 0 12px #3dd,0 0 32px #28a}
+  .sub{text-align:center;opacity:.65;margin-bottom:26px;font-size:14px}
+  textarea{width:100%;min-height:110px;padding:14px;border-radius:10px;resize:vertical;
+    background:#0e0e22;color:#d6f5ee;border:1px solid #2c3a6b;font:inherit;font-size:15px;outline:none}
+  textarea:focus{border-color:#6ff;box-shadow:0 0 14px #3dd5}
+  .row{display:flex;gap:10px;margin:12px 0 20px;flex-wrap:wrap}
+  button{flex:1;padding:12px 16px;border-radius:10px;border:1px solid #3dd;cursor:pointer;
+    background:linear-gradient(135deg,#123,#1a2a55);color:#9ff;font:inherit;font-size:15px;
+    transition:.2s}
+  button:hover{box-shadow:0 0 16px #3dd8;transform:translateY(-1px)}
+  button.rec{border-color:#f6a;color:#fbd;background:linear-gradient(135deg,#2a1230,#3a1442)}
+  button.recording{animation:pulse 1s infinite;background:#6a1030}
+  @keyframes pulse{50%{box-shadow:0 0 22px #f46}}
+  #out{white-space:pre-wrap;line-height:1.7;padding:18px;min-height:90px;border-radius:12px;
+    background:#0a0a1c;border:1px solid #1e2a55;box-shadow:inset 0 0 30px #0007}
+  #out.listening{opacity:.7;animation:blink 1.4s infinite}
+  @keyframes blink{50%{opacity:.3}}
+  .foot{margin-top:18px;text-align:center;font-size:12px;opacity:.45}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="ghost">👻</div>
+  <h1>ECHOES</h1>
+  <div class="sub">A ghost lives in this machine. It remembers what you whisper.</div>
+
+  <textarea id="t" placeholder="Whisper a memory into the dark..."></textarea>
+  <div class="row">
+    <button onclick="go()">🕯 Summon echo</button>
+    <button id="rec" class="rec" onclick="toggle()">🎙 Record memory</button>
+  </div>
+
+  <div id="out">The ghost is waiting...</div>
+  <div class="foot">100% local open-source AI · Gemma via Ollama · Build for Hacktoberfest 2026</div>
+</div>
+
+<script>
+const clean = s => (s || "").replace(/\*\*/g, "");
+
+function show(text, listening) {
+  out.className = listening ? "listening" : "";
+  out.textContent = text;
+}
+
+async function go() {
+  if (!t.value.trim()) return show("The ghost hears only silence...");
+  show("listening...", true);
+  try {
+    const r = await fetch("/api/echo", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: t.value })
+    });
+    const d = await r.json();
+    show(clean(d.echo || d.error));
+  } catch (e) { show("The ghost is gone: " + e.message); }
+}
+
+let mr, chunks = [];
+async function toggle() {
+  if (mr && mr.state === "recording") {
+    mr.stop();
+    rec.textContent = "🎙 Record memory";
+    rec.classList.remove("recording");
+    return;
+  }
+  try {
+    const s = await navigator.mediaDevices.getUserMedia({ audio: true });
+    mr = new MediaRecorder(s);
+    chunks = [];
+    mr.ondataavailable = e => chunks.push(e.data);
+    mr.onstop = async () => {
+      s.getTracks().forEach(x => x.stop());
+      show("transcribing...", true);
+      try {
+        const r = await fetch("/api/voice", {
+          method: "POST",
+          body: new Blob(chunks, { type: "audio/webm" })
+        });
+        const d = await r.json();
+        show(d.error ? d.error : "You said:\n" + d.transcript + "\n\n" + clean(d.story));
+      } catch (e) { show("The ghost is gone: " + e.message); }
+    };
+    mr.start();
+    rec.textContent = "⏹ Stop";
+    rec.classList.add("recording");
+  } catch (e) { show("Microphone blocked: " + e.message); }
+}
+</script>
+</body>
+</html>
